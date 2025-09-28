@@ -1,30 +1,44 @@
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext.jsx'
 import Login from './pages/Login.jsx'
 import PrivateRoute from './components/PrivateRoute.jsx'
-import { Navigate } from 'react-router-dom'
 import 'react-toastify/dist/ReactToastify.css'
 import { ToastContainer } from 'react-toastify'
+
+import AdminView from './components/AdminView'
+import UserView from './components/UserView'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+
+        {/* 🔥 Cada uno con su vista */}
+        <Route
+          path="/admin"
+          element={
+            <PrivateRoute role="admin">
+              <AdminView />
+            </PrivateRoute>
+          }
+        />
+
         <Route
           path="/usuarios"
           element={
             <PrivateRoute>
-              <App />
+              <UserView />
             </PrivateRoute>
           }
         />
+
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
-      <ToastContainer position='top-right'  autoClose={3000} />
+      <ToastContainer position="top-right" autoClose={3000} />
     </AuthProvider>
   </BrowserRouter>
 )
