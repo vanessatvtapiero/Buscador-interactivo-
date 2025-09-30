@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import SearchInput from './SearchInput'
 import UserCard from './UserCard'
-import UserModal from './userModal'
+import UserModal from './UserModal'
 import { useAuth } from '../context/AuthContext'
-import { motion } from 'framer-motion'
 import { CircularProgress } from '@mui/material'
 import 'react-toastify/dist/ReactToastify.css'  
-
- export default function AdminView() {
+// import { toast } from 'react-toastify'
+export default function AdminView() {
   const [usuarios, setUsuarios] = useState([])
   const [filtrados, setFiltrados] = useState([])
   const [loading, setLoading] = useState(true)
@@ -16,22 +15,20 @@ import 'react-toastify/dist/ReactToastify.css'
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null)
   const { logout } = useAuth()
 
-useEffect(() => {
-  Promise.all([
-    fetch('http://localhost:3001/usuarios').then(res => res.json()),
-    fetch('http://localhost:3001/tareas').then(res => res.json())
-  ]).then(([usuariosData, tareasData]) => {
-    const usuariosConTareas = usuariosData.map(usuario => ({
-      ...usuario,
-      tareas: tareasData.filter(tarea => tarea.userId === usuario.id)
-    }))
-    setUsuarios(usuariosConTareas)
-    setFiltrados(usuariosConTareas)
-    setLoading(false)
-  })
-}, [])
-
-
+  useEffect(() => {
+    Promise.all([
+      fetch('http://localhost:3001/usuarios').then(res => res.json()),
+      fetch('http://localhost:3001/tareas').then(res => res.json())
+    ]).then(([usuariosData, tareasData]) => {
+      const usuariosConTareas = usuariosData.map(usuario => ({
+        ...usuario,
+        tareas: tareasData.filter(tarea => tarea.userId === usuario.id)
+      }))
+      setUsuarios(usuariosConTareas)
+      setFiltrados(usuariosConTareas)
+      setLoading(false)
+    })
+  }, [])
 
   const filtrarUsuarios = useCallback(
     (query) => {
@@ -64,6 +61,37 @@ useEffect(() => {
     setModalAbierto(false)
     setUsuarioSeleccionado(null)
   }
+
+  // ✅ Nueva función: actualizar usuario en el estado local
+ // ✅ Nueva función: actualizar usuario en backend y estado local
+const actualizarUsuario = async (usuarioActualizado) => {
+  try {
+    const res = await fetch(`http://localhost:3001/usuarios/${usuarioActualizado.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(usuarioActualizado)
+    })
+
+    if (!res.ok) throw new Error("Error al actualizar en backend")
+    const data = await res.json()
+
+    // 🔄 refrescar tareas desde backend
+    const tareasRes = await fetch(`http://localhost:3001/tareas?userId=${data.id}`)
+    const tareasUsuario = await tareasRes.json()
+    const usuarioConTareas = { ...data, tareas: tareasUsuario }
+
+    // actualizar estados locales
+    setUsuarios((prev) =>
+      prev.map((u) => (u.id === data.id ? usuarioConTareas : u))
+    )
+    setFiltrados((prev) =>
+      prev.map((u) => (u.id === data.id ? usuarioConTareas : u))
+    )
+    setUsuarioSeleccionado(usuarioConTareas) // 👈 refresca el modal abierto
+  } catch (err) {
+    console.error("❌ Error actualizando usuario:", err)
+  }
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4">
@@ -111,14 +139,15 @@ useEffect(() => {
 
         {!buscando && !loading && filtrados.length === 0 && (
           <div className="text-center py-20">
-            <p className="text-gray-500 text-lg">No se encontraron usuarios</p>
+            <p className="text-gray-500 text-lg">No se encontraron usuarios</p> 
           </div>
         )}
-
+        
         <UserModal
           isOpen={modalAbierto}
           onClose={cerrarModal}
           usuario={usuarioSeleccionado}
+          onUpdate={actualizarUsuario}  // 👈 le pasamos la función al modal
         />
       </div>
     </div>
