@@ -5,7 +5,7 @@ import UserModal from './UserModal'
 import { useAuth } from '../context/AuthContext'
 import { CircularProgress } from '@mui/material'
 import 'react-toastify/dist/ReactToastify.css'  
-// import { toast } from 'react-toastify'
+
 export default function AdminView() {
   const [usuarios, setUsuarios] = useState([])
   const [filtrados, setFiltrados] = useState([])

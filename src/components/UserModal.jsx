@@ -7,7 +7,6 @@ export default function UserModal({ isOpen, onClose, usuario, onUpdate }) {
   const [tareas, setTareas] = useState(usuario.tareas || [])
   const [nuevaTarea, setNuevaTarea] = useState("")
 
-  // 🔄 Mantener sincronizado si cambia el usuario
   useEffect(() => {
     setTareas(usuario.tareas || [])
   }, [usuario])
