@@ -7,8 +7,6 @@ import Login from './pages/Login.jsx'
 import PrivateRoute from './components/PrivateRoute.jsx'
 import 'react-toastify/dist/ReactToastify.css'
 import { ToastContainer } from 'react-toastify'
-
-import AdminView from './components/AdminView'
 import UserView from './components/UserView'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -16,17 +14,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
-
-        {/* 🔥 Cada uno con su vista */}
-        <Route
-          path="/admin"
-          element={
-            <PrivateRoute role="admin">
-              <AdminView />
-            </PrivateRoute>
-          }
-        />
-
         <Route
           path="/usuarios"
           element={
