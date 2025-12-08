@@ -3,47 +3,58 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
-const AuthContext = createContext()
+const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const navigate = useNavigate()
+  // Modificar el estado inicial
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const navigate = useNavigate();
 
+  // Modificar la función login
   const login = async (correo, password) => {
     try {
-      // Buscar en json-server
-      const res = await fetch(`http://localhost:3001/usuarios?correo=${correo}&password=${password}`)
-      const data = await res.json()
+      const res = await fetch("http://localhost:3001/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correo, password })
+      });
+
+      const data = await res.json();
 
       if (data.length > 0) {
-        const loggedUser = data[0]
-        setUser(loggedUser)
+        const loggedUser = data[0];
+        setUser(loggedUser);
+        localStorage.setItem('user', JSON.stringify(loggedUser));
 
         if (loggedUser.rol === "admin") {
-          toast.success("Login exitoso como Administrador!")
-          navigate("/admin")   // 🔥 redirección a admin
+          toast.success("¡Bienvenido Administrador!");
+          navigate("/admin");
         } else {
-          toast.success("Login exitoso!")
-          navigate("/usuarios") // 🔥 redirección a usuarios
+          toast.success("¡Inicio de sesión exitoso!");
+          navigate("/usuarios");
         }
-
-        return loggedUser
+        return loggedUser;
       } else {
-        toast.error("Credenciales incorrectas")
-        return null
+        toast.error("Credenciales incorrectas");
+        return null;
       }
     } catch (error) {
-      console.error("Error en login:", error)
-      toast.error("Error al iniciar sesión")
-      return null
+      console.error("Error en login:", error);
+      toast.error("Error al iniciar sesión");
+      return null;
     }
-  }
+  };
 
+  // Modificar la función logout
   const logout = () => {
-    setUser(null)
-    toast.info('Sesión cerrada')
-    navigate('/login')
-  }
+    setUser(null);
+    localStorage.removeItem('user');
+    toast.info('Sesión cerrada');
+    navigate('/login');
+  };
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
