@@ -33,17 +33,57 @@ export default function UserView() {
   const toggleComplete = async (id) => {
     try {
       const tareaActualizar = tareas.find(t => t.id === id);
-      const tareaActualizada = { ...tareaActualizar, completada: !tareaActualizar.completada };
+      if (!tareaActualizar) {
+        console.error('No se encontró la tarea con id:', id);
+        return;
+      }
+      
+      const tareaActualizada = { 
+        ...tareaActualizar, 
+        completada: !tareaActualizar.completada 
+      };
 
-      const apiUrl = import.meta.env.VITE_API_URL;
-      await fetch(`${apiUrl}/tareas/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completada: tareaActualizada.completada })
+      console.log('Actualizando tarea:', {
+        id,
+        tareaActualizar,
+        nuevoEstado: tareaActualizada.completada,
+        userId: user.id
       });
 
+      const apiUrl = import.meta.env.VITE_API_URL;
+      console.log('URL de la API:', `${apiUrl}/tareas/${id}`);
+      
+      const response = await fetch(`${apiUrl}/tareas/${id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          tarea: tareaActualizar.tarea,
+          fecha: tareaActualizar.fecha,
+          completada: tareaActualizada.completada,
+          userId: user.id
+        })
+      });
+
+      console.log('Respuesta del servidor:', {
+        status: response.status,
+        statusText: response.statusText
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Error en la respuesta del servidor:', errorData);
+        throw new Error(`Error al actualizar la tarea: ${response.status} ${response.statusText}`);
+      }
+
+      // Actualizar el estado local con los datos del servidor
+      const updatedTask = await response.json();
+      console.log('Tarea actualizada en el servidor:', updatedTask);
+      
       setTareas(tareas.map(t =>
-        t.id === id ? { ...t, completada: !t.completada } : t
+        t.id === id ? updatedTask : t
       ));
     } catch (error) {
       console.error('Error al actualizar la tarea:', error);

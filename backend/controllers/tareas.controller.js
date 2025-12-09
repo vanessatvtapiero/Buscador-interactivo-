@@ -31,6 +31,10 @@ export async function crearTarea(req, res) {
 
 // En tareas.controller.js
 export async function actualizarTarea(req, res) {
+  console.log('=== INICIO actualizarTarea ===');
+  console.log('Params:', req.params);
+  console.log('Body:', req.body);
+  
   const { id } = req.params;
   const { tarea, fecha, completada, userId } = req.body;
 
@@ -39,48 +43,99 @@ export async function actualizarTarea(req, res) {
     tarea,
     fecha,
     completada,
-    userId
+    userId,
+    tipos: {
+      id: typeof id,
+      tarea: typeof tarea,
+      fecha: typeof fecha,
+      completada: typeof completada,
+      userId: typeof userId
+    }
   });
 
   try {
     // Verificar que la tarea exista
+    console.log('Buscando tarea con id:', id);
     const [tareaExistente] = await db.query("SELECT * FROM tareas WHERE id = ?", [id]);
+    console.log('Tarea encontrada en la base de datos:', tareaExistente[0]);
     
     if (!tareaExistente || tareaExistente.length === 0) {
-      console.log('Tarea no encontrada');
-      return res.status(404).json({ error: "Tarea no encontrada" });
+      console.log('ERROR: Tarea no encontrada en la base de datos');
+      return res.status(404).json({ 
+        error: "Tarea no encontrada",
+        idBuscado: id,
+        tareasEncontradas: tareaExistente
+      });
     }
 
     // Verificar que el usuario sea el propietario
+    console.log('Verificando propietario. UserId en tarea:', tareaExistente[0].userId, 'userId en solicitud:', userId);
     if (tareaExistente[0].userId != userId) {
-      console.log('Usuario no autorizado');
-      return res.status(403).json({ error: "No autorizado para modificar esta tarea" });
+      console.log('ERROR: Usuario no autorizado para modificar esta tarea');
+      return res.status(403).json({ 
+        error: "No autorizado para modificar esta tarea",
+        userIdTarea: tareaExistente[0].userId,
+        userIdSolicitud: userId
+      });
     }
 
+    // Construir la consulta SQL dinámicamente
+    const updates = [];
+    const values = [];
+    
+    if (tarea !== undefined) {
+      updates.push('tarea = ?');
+      values.push(tarea);
+    }
+    
+    if (fecha !== undefined) {
+      updates.push('fecha = ?');
+      values.push(fecha);
+    }
+    
+    if (completada !== undefined) {
+      updates.push('completada = ?');
+      values.push(completada);
+    }
+    
+    // Agregar el WHERE
+    values.push(id, userId);
+    
+    const query = `UPDATE tareas 
+                   SET ${updates.join(', ')}
+                   WHERE id = ? AND userId = ?`;
+    
+    console.log('Ejecutando consulta SQL:', query);
+    console.log('Valores:', values);
+    
     // Actualizar la tarea
-    const [result] = await db.query(
-      `UPDATE tareas 
-       SET tarea = COALESCE(?, tarea),
-           fecha = COALESCE(?, fecha),
-           completada = COALESCE(?, completada)
-       WHERE id = ? AND userId = ?`,
-      [tarea, fecha, completada, id, userId]
-    );
-
+    const [result] = await db.query(query, values);
     console.log('Resultado de la actualización:', result);
 
     if (result.affectedRows === 0) {
-      return res.status(400).json({ error: "No se pudo actualizar la tarea" });
+      console.log('ERROR: No se afectaron filas en la actualización');
+      return res.status(400).json({ 
+        error: "No se pudo actualizar la tarea",
+        query: query,
+        values: values,
+        result: result
+      });
     }
 
     // Obtener la tarea actualizada
+    console.log('Obteniendo tarea actualizada...');
     const [tareaActualizada] = await db.query("SELECT * FROM tareas WHERE id = ?", [id]);
     
     if (!tareaActualizada || tareaActualizada.length === 0) {
-      return res.status(404).json({ error: "No se pudo obtener la tarea actualizada" });
+      console.log('ERROR: No se pudo obtener la tarea actualizada después de la actualización');
+      return res.status(404).json({ 
+        error: "No se pudo obtener la tarea actualizada",
+        id: id
+      });
     }
 
-    console.log('Tarea actualizada:', tareaActualizada[0]);
+    console.log('Tarea actualizada correctamente:', tareaActualizada[0]);
+    console.log('=== FIN actualizarTarea ===');
     res.json(tareaActualizada[0]);
 
   } catch (error) {
