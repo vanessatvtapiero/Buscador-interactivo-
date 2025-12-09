@@ -12,7 +12,8 @@ export default function UserView() {
 
   const borrarTarea = async (id) => {
     try {
-      await fetch(`http://localhost:3001/tareas/${id}`, {
+      const apiUrl = import.meta.env.VITE_API_URL;
+      await fetch(`${apiUrl}/tareas/${id}`, {
         method: 'DELETE',
       });
       setTareas(tareas.filter(t => t.id !== id));
@@ -34,7 +35,8 @@ export default function UserView() {
       const tareaActualizar = tareas.find(t => t.id === id);
       const tareaActualizada = { ...tareaActualizar, completada: !tareaActualizar.completada };
 
-      await fetch(`http://localhost:3001/tareas/${id}`, {
+      const apiUrl = import.meta.env.VITE_API_URL;
+      await fetch(`${apiUrl}/tareas/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completada: tareaActualizada.completada })
@@ -56,7 +58,8 @@ export default function UserView() {
 
     const fetchTareas = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/tareas/${user.id}`);
+        const apiUrl = import.meta.env.VITE_API_URL;
+        const response = await fetch(`${apiUrl}/tareas/${user.id}`);
         if (!response.ok) {
           throw new Error('Error al cargar las tareas');
         }
@@ -100,7 +103,8 @@ const addTask = async (e) => {
         userId: user.id
       });
 
-      const response = await fetch(`http://localhost:3001/tareas/${tareaId}`, {
+      const apiUrl = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${apiUrl}/tareas/${tareaId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -145,7 +149,8 @@ const addTask = async (e) => {
     setTarea('');
 
     // Enviar al servidor
-    const response = await fetch("http://localhost:3001/tareas", {
+    const apiUrl = import.meta.env.VITE_API_URL;
+    const response = await fetch(`${apiUrl}/tareas`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
