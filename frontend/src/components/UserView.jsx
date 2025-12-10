@@ -31,25 +31,53 @@ export default function UserView() {
 };
 
    const toggleComplete = async (id) => {
-    try {
-      const tareaActualizar = tareas.find(t => t.id === id);
-      const tareaActualizada = { ...tareaActualizar, completada: !tareaActualizar.completada };
-
-      const apiUrl = import.meta.env.VITE_API_URL;
-      await fetch(`${apiUrl}/tareas/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completada: tareaActualizada.completada })
-      });
-
-      setTareas(tareas.map(t =>
-        t.id === id ? { ...t, completada: !t.completada } : t
-      ));
-    } catch (error) {
-      console.error('Error al actualizar la tarea:', error);
+  try {
+    // Buscar la tarea actual
+    const tareaActual = tareas.find(t => t.id === id);
+    if (!tareaActual) {
+      console.error('No se encontró la tarea con id:', id);
+      return;
     }
-  };
 
+    // Crear objeto actualizado
+    const tareaActualizada = {
+      ...tareaActual,
+      completada: !tareaActual.completada
+    };
+
+    const apiUrl = import.meta.env.VITE_API_URL;
+    
+    // Enviar solicitud al servidor
+    const response = await fetch(`${apiUrl}/tareas/${id}`, {
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        tarea: tareaActual.tarea,
+        fecha: tareaActual.fecha,
+        completada: tareaActualizada.completada,
+        userId: user.id
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Error del servidor:', errorData);
+      throw new Error(`Error al actualizar: ${response.status}`);
+    }
+
+    // Actualizar el estado local con la respuesta del servidor
+    const tareaActualizadaDelServidor = await response.json();
+    
+    setTareas(tareas.map(t => 
+      t.id === id ? tareaActualizadaDelServidor : t
+    ));
+
+  } catch (error) {
+    console.error('Error al actualizar la tarea:', error);
+  }
+};
   const tareasCompletadas = tareas.filter(t => t.completada).length;
   const tareasPendientes = tareas.filter(t => !t.completada).length;
 

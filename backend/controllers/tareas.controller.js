@@ -105,9 +105,10 @@ export async function actualizarTarea(req, res) {
     // Agregar el WHERE
     values.push(id, userId);
 
+    // Reemplazar las líneas problemáticas (alrededor de la línea 110)
     const query = `UPDATE tareas 
-                   SET ${updates.join(', ')}
-                   WHERE id = ? AND userId = ?`;
+               SET ${updates.join(', ')}
+               WHERE id = ? AND userId = ?`;
 
     console.log('Ejecutando consulta SQL:', query);
     console.log('Valores:', values);
