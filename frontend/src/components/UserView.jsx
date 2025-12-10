@@ -23,63 +23,63 @@ export default function UserView() {
   };
 
   const editarTarea = (id) => {
-  const tareaAEditar = tareas.find(t => t.id === id);
-  if (tareaAEditar) {
-    setTarea(tareaAEditar.tarea);
-    setEditando(id);
-  }
-};
-
-const toggleComplete = async (id) => {
-  try {
-    const tareaActualizar = tareas.find(t => t.id === id);
-    if (!tareaActualizar) {
-      console.error('No se encontró la tarea con id:', id);
-      return;
+    const tareaAEditar = tareas.find(t => t.id === id);
+    if (tareaAEditar) {
+      setTarea(tareaAEditar.tarea);
+      setEditando(id);
     }
-    
-    const tareaActualizada = { 
-      ...tareaActualizar, 
-      completada: !tareaActualizar.completada 
-    };
+  };
 
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    
-    const response = await fetch(`${apiUrl}/tareas/${id}`, {
-      method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        tarea: tareaActualizar.tarea,
-        fecha: tareaActualizar.fecha,
-        completada: tareaActualizada.completada,
-        userId: user?.id // Asegúrate de que user no sea null/undefined
-      })
-    });
+  const toggleComplete = async (id) => {
+    try {
+      const tareaActualizar = tareas.find(t => t.id === id);
+      if (!tareaActualizar) {
+        console.error('No se encontró la tarea con id:', id);
+        return;
+      }
 
-    const responseData = await response.json();
-    
-    if (!response.ok) {
-      console.error('Error en la respuesta del servidor:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: responseData
+      const tareaActualizada = {
+        ...tareaActualizar,
+        completada: !tareaActualizar.completada
+      };
+
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+      const response = await fetch(`${apiUrl}/tareas/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          tarea: tareaActualizar.tarea,
+          fecha: tareaActualizar.fecha,
+          completada: tareaActualizada.completada,
+          userId: user?.id // Asegúrate de que user no sea null/undefined
+        })
       });
-      throw new Error(responseData.error || 'Error al actualizar la tarea');
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        console.error('Error en la respuesta del servidor:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: responseData
+        });
+        throw new Error(responseData.error || 'Error al actualizar la tarea');
+      }
+
+      // Actualizar el estado local con los datos del servidor
+      setTareas(tareas.map(t =>
+        t.id === id ? { ...t, ...responseData.data, completada: tareaActualizada.completada } : t
+      ));
+
+    } catch (error) {
+      console.error('Error en toggleComplete:', error);
+      // Aquí podrías mostrar un mensaje de error al usuario
     }
-
-    // Actualizar el estado local con los datos del servidor
-    setTareas(tareas.map(t => 
-      t.id === id ? { ...t, ...responseData.data, completada: tareaActualizada.completada } : t
-    ));
-
-  } catch (error) {
-    console.error('Error en toggleComplete:', error);
-    // Aquí podrías mostrar un mensaje de error al usuario
-  }
-};
+  };
 
   const tareasCompletadas = tareas.filter(t => t.completada).length;
   const tareasPendientes = tareas.filter(t => !t.completada).length;
@@ -106,109 +106,112 @@ const toggleComplete = async (id) => {
     fetchTareas();
   }, [user]);
 
-const addTask = async (e) => {
-  e.preventDefault();
-  if (tarea.trim() === '') return;
+  const addTask = async (e) => {
+    e.preventDefault();
+    if (tarea.trim() === '') return;
 
-  const tareaText = tarea.trim();
+    const tareaText = tarea.trim();
 
-  try {
-    if (!user?.id) {
-      console.error('Usuario no autenticado');
-      return;
-    }
-
-    // Si estamos editando una tarea existente
-    if (editando) {
-      const tareaId = editando;
-      const tareaActual = tareas.find(t => t.id === tareaId);
-      
-      if (!tareaActual) {
-        console.error('Tarea no encontrada para editar');
+    try {
+      if (!user?.id) {
+        console.error('Usuario no autenticado');
         return;
       }
 
-      console.log('Enviando actualización al servidor:', {
-        id: tareaId,
-        tarea: tareaText,
-        userId: user.id
-      });
+      // Si estamos editando una tarea existente
+      if (editando) {
+        const tareaId = editando;
+        const tareaActual = tareas.find(t => t.id === tareaId);
 
+        if (!tareaActual) {
+          console.error('Tarea no encontrada para editar');
+          return;
+        }
+
+        console.log('Enviando actualización al servidor:', {
+          id: tareaId,
+          tarea: tareaText,
+          userId: user.id
+        });
+
+        const apiUrl = import.meta.env.VITE_API_URL;
+        const response = await fetch(`${apiUrl}/tareas/${tareaId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tarea: tareaText,
+            fecha: tareaActual.fecha,
+            completada: tareaActual.completada,
+            userId: user.id
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          throw new Error(`Error al actualizar: ${response.status} ${response.statusText}`);
+        }
+
+        const tareaActualizada = await response.json();
+
+        // Verificar si la respuesta tiene la propiedad 'data'
+        const tareaActualizadaData = tareaActualizada.data || tareaActualizada;
+
+        // Actualizar el estado local
+        setTareas(prevTareas =>
+          prevTareas.map(t =>
+            t.id === tareaId ? { ...t, ...tareaActualizadaData } : t
+          )
+        );
+
+        // Limpiar el formulario
+        setEditando(null);
+        setTarea('');
+        return;
+      }
+
+      // Resto del código para crear una nueva tarea...
+      const tareaTemporal = {
+        id: Date.now(), // ID temporal
+        tarea: tareaText,
+        fecha: new Date().toISOString().split('T')[0],
+        userId: user.id,
+        completada: false
+      };
+
+      // Actualizar el estado local inmediatamente
+      setTareas(prevTareas => [tareaTemporal, ...prevTareas]);
+      setTarea('');
+
+      // Enviar al servidor
       const apiUrl = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${apiUrl}/tareas/${tareaId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch(`${apiUrl}/tareas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tarea: tareaText,
-          fecha: tareaActual.fecha,
-          completada: tareaActual.completada,
+          fecha: tareaTemporal.fecha,
           userId: user.id
         })
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Error al actualizar: ${response.status} ${response.statusText}`);
+        throw new Error('Error al crear la tarea');
       }
 
-      const tareaActualizada = await response.json();
-      
-      // Actualizar el estado local
-      setTareas(prevTareas => 
-        prevTareas.map(t => 
-          t.id === tareaId ? { ...t, tarea: tareaText } : t
+      const tareaCreada = await response.json();
+
+      // Actualizar con los datos del servidor
+      setTareas(prevTareas =>
+        prevTareas.map(t =>
+          t.id === tareaTemporal.id ? { ...t, ...tareaCreada } : t
         )
       );
-      
-      // Limpiar el formulario
-      setEditando(null);
-      setTarea('');
-      return;
+
+    } catch (error) {
+      console.error('Error al procesar la tarea:', error);
+      alert(error.message || 'Error al procesar la tarea');
     }
-
-    // Resto del código para crear una nueva tarea...
-    const tareaTemporal = {
-      id: Date.now(), // ID temporal
-      tarea: tareaText,
-      fecha: new Date().toISOString().split('T')[0],
-      userId: user.id,
-      completada: false
-    };
-
-    // Actualizar el estado local inmediatamente
-    setTareas(prevTareas => [tareaTemporal, ...prevTareas]);
-    setTarea('');
-
-    // Enviar al servidor
-    const apiUrl = import.meta.env.VITE_API_URL;
-    const response = await fetch(`${apiUrl}/tareas`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        tarea: tareaText,
-        fecha: tareaTemporal.fecha,
-        userId: user.id
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al crear la tarea');
-    }
-
-    const tareaCreada = await response.json();
-    
-    // Actualizar con los datos del servidor
-    setTareas(prevTareas => 
-      prevTareas.map(t => 
-        t.id === tareaTemporal.id ? { ...t, ...tareaCreada } : t
-      )
-    );
-
-  } catch (error) {
-    console.error('Error al procesar la tarea:', error);
-    alert(error.message || 'Error al procesar la tarea');
-  }
-}; 
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4">
       <div className="max-w-4xl mx-auto">
@@ -261,73 +264,73 @@ const addTask = async (e) => {
         </form>
 
         {/* Lista de tareas */}
-{/* Lista de tareas */}
-{tareas.length === 0 ? (
-  <div className="text-center py-12 text-gray-500">
-    <p className="text-xl">No tienes tareas pendientes</p>
-    <p className="text-sm mt-2">¡Agrega tu primera tarea para comenzar!</p>
-  </div>
-) : (
-  <div className="space-y-4">
-    {tareas.map((tareaItem) => {
-      // Función para formatear la fecha de manera segura
-      const formatearFecha = (fecha) => {
-        try {
-          // Si la fecha es un string en formato YYYY-MM-DD
-          if (typeof fecha === 'string' && fecha.includes('-')) {
-            const [year, month, day] = fecha.split('-').map(Number);
-            return new Date(year, month - 1, day).toLocaleDateString('es-ES');
-          }
-          // Si es un timestamp o ya es un objeto Date
-          const fechaObj = new Date(fecha);
-          if (isNaN(fechaObj.getTime())) {
-            return 'Hoy';
-          }
-          return fechaObj.toLocaleDateString('es-ES');
-        } catch (error) {
-          console.error('Error formateando fecha:', error);
-          return 'Hoy';
-        }
-      };
+        {/* Lista de tareas */}
+        {tareas.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <p className="text-xl">No tienes tareas pendientes</p>
+            <p className="text-sm mt-2">¡Agrega tu primera tarea para comenzar!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {tareas.map((tareaItem) => {
+              // Función para formatear la fecha de manera segura
+              const formatearFecha = (fecha) => {
+                try {
+                  // Si la fecha es un string en formato YYYY-MM-DD
+                  if (typeof fecha === 'string' && fecha.includes('-')) {
+                    const [year, month, day] = fecha.split('-').map(Number);
+                    return new Date(year, month - 1, day).toLocaleDateString('es-ES');
+                  }
+                  // Si es un timestamp o ya es un objeto Date
+                  const fechaObj = new Date(fecha);
+                  if (isNaN(fechaObj.getTime())) {
+                    return 'Hoy';
+                  }
+                  return fechaObj.toLocaleDateString('es-ES');
+                } catch (error) {
+                  console.error('Error formateando fecha:', error);
+                  return 'Hoy';
+                }
+              };
 
-      return (
-        <div
-          key={`tarea-${tareaItem.id}`}
-          className="flex justify-between items-center bg-white p-4 rounded-lg shadow-md"
-        >
-          <div>
-            <p className={`text-lg ${tareaItem.completada ? 'line-through text-gray-400' : ''}`}>
-              {tareaItem.tarea}
-            </p>
-            <span className="text-sm text-gray-500">
-              {formatearFecha(tareaItem.fecha)}
-            </span>
+              return (
+                <div
+                  key={`tarea-${tareaItem.id}`}
+                  className="flex justify-between items-center bg-white p-4 rounded-lg shadow-md"
+                >
+                  <div>
+                    <p className={`text-lg ${tareaItem.completada ? 'line-through text-gray-400' : ''}`}>
+                      {tareaItem.tarea}
+                    </p>
+                    <span className="text-sm text-gray-500">
+                      {formatearFecha(tareaItem.fecha)}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => toggleComplete(tareaItem.id)}
+                      className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded"
+                    >
+                      {tareaItem.completada ? 'Desmarcar' : 'Completar'}
+                    </button>
+                    <button
+                      onClick={() => editarTarea(tareaItem.id)}
+                      className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => borrarTarea(tareaItem.id)}
+                      className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded"
+                    >
+                      Borrar
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => toggleComplete(tareaItem.id)}
-              className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded"
-            >
-              {tareaItem.completada ? 'Desmarcar' : 'Completar'}
-            </button>
-            <button
-              onClick={() => editarTarea(tareaItem.id)}
-              className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded"
-            >
-              Editar
-            </button>
-            <button
-              onClick={() => borrarTarea(tareaItem.id)}
-              className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded"
-            >
-              Borrar
-            </button>
-          </div>
-        </div>
-      );
-    })}
-  </div>
-)}
+        )}
       </div>
     </div>
   );
