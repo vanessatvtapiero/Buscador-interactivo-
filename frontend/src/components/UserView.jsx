@@ -32,31 +32,19 @@ export default function UserView() {
 
 const toggleComplete = async (id) => {
   try {
-    // 1. Encontrar la tarea a actualizar
     const tareaActualizar = tareas.find(t => t.id === id);
     if (!tareaActualizar) {
       console.error('No se encontró la tarea con id:', id);
       return;
     }
     
-    // 2. Crear objeto con los datos actualizados
     const tareaActualizada = { 
       ...tareaActualizar, 
       completada: !tareaActualizar.completada 
     };
 
-    console.log('Datos a enviar al servidor:', {
-      id,
-      tarea: tareaActualizar.tarea,
-      fecha: tareaActualizar.fecha,
-      completada: tareaActualizada.completada,
-      userId: user.id
-    });
-
-    // 3. Obtener la URL base de la API
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     
-    // 4. Realizar la petición al servidor
     const response = await fetch(`${apiUrl}/tareas/${id}`, {
       method: 'PUT',
       headers: { 
@@ -67,11 +55,10 @@ const toggleComplete = async (id) => {
         tarea: tareaActualizar.tarea,
         fecha: tareaActualizar.fecha,
         completada: tareaActualizada.completada,
-        userId: user.id
+        userId: user?.id // Asegúrate de que user no sea null/undefined
       })
     });
 
-    // 5. Manejar la respuesta
     const responseData = await response.json();
     
     if (!response.ok) {
@@ -83,19 +70,14 @@ const toggleComplete = async (id) => {
       throw new Error(responseData.error || 'Error al actualizar la tarea');
     }
 
-    // 6. Actualizar el estado local con los datos del servidor
-    console.log('Tarea actualizada correctamente:', responseData);
+    // Actualizar el estado local con los datos del servidor
     setTareas(tareas.map(t => 
-      t.id === id ? { ...t, ...responseData } : t
+      t.id === id ? { ...t, ...responseData.data, completada: tareaActualizada.completada } : t
     ));
 
   } catch (error) {
-    console.error('Error en toggleComplete:', {
-      error: error.message,
-      stack: error.stack
-    });
+    console.error('Error en toggleComplete:', error);
     // Aquí podrías mostrar un mensaje de error al usuario
-    // Por ejemplo: setError('No se pudo actualizar la tarea. Intenta de nuevo.');
   }
 };
 
