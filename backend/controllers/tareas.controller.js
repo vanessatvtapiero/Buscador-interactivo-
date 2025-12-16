@@ -10,9 +10,12 @@ export async function getTareas(req, res) {
 export async function crearTarea(req, res) {
   const { tarea, fecha, userId } = req.body;
   try {
+    // Formatear la fecha al formato YYYY-MM-DD que espera MySQL
+    const fechaFormateada = fecha ? new Date(fecha).toISOString().split('T')[0] : null;
+    
     const [result] = await db.query(
       "INSERT INTO tareas (tarea, fecha, userId) VALUES (?, ?, ?)",
-      [tarea, fecha, userId]
+      [tarea, fechaFormateada, userId]
     );
 
     const nuevaTarea = {
@@ -94,7 +97,10 @@ export async function actualizarTarea(req, res) {
 
     if (fecha !== undefined) {
       updates.push('fecha = ?');
-      values.push(fecha);
+      // Convertir la fecha al formato YYYY-MM-DD que espera MySQL
+      const fechaObj = new Date(fecha);
+      const fechaFormateada = fechaObj.toISOString().split('T')[0];
+      values.push(fechaFormateada);
     }
 
     if (completada !== undefined) {
